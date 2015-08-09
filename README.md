@@ -1,5 +1,5 @@
 # Bash2REST
-Lets you execute bash scripts located in /scripts with an REST "API".
+Lets you execute bash scripts located in /scripts via a REST interface.
 Does some basic escape character removal, but only trust it from internal source.
 
 ## Contains some example scripts:
