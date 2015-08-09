@@ -44,8 +44,8 @@ import subprocess
 import multiprocessing
 
 REMOVE_CHARS = ";&`'!\"|<>"
-LOGDIR = "./logs"
-SCRIPTDIR = "./scripts"
+LOGDIR = "/logs"
+SCRIPTDIR = "/scripts"
 
 app = Flask(__name__)
 
