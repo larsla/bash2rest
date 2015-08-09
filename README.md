@@ -1,19 +1,20 @@
 # Bash2REST
 Lets you execute bash scripts located in /scripts via a REST interface.  
-Does some basic escape character removal, but only trust it from internal source.
+Does some basic escape character removal, but only trust it from internal source.  
 
-## Contains some example scripts:
-example.sh - plain old helloworld that prints the input parameter  
-env.sh - prints the environment variables that was set when the script runs  
-jq.sh - example of using jq to parse JSON input  
-counter.sh - counting to 10 with 1s sleep in each step.  
-             shows how the streaming log output works  
+Name the script with the request method first: <METHOD>_<SCRIPT>.sh  
+Ex: GET_test.sh  
 
-## Get list of available scripts:
-```
-$ curl http://127.0.0.1:5000/
-example env jq
-```
+You can use directories:  
+/scripts/users/POST_create.sh  
+
+Contains some example scripts:  
+POST_example.sh - plain old helloworld that prints the input parameter.  
+POST_env.sh - prints the environment variables that was set when the script runs.  
+POST_jq.sh - example of using jq to parse JSON input  
+GET_counter.sh - counting to 10 with 1s sleep in each step.  
+                shows how the streaming log output works
+
 
 ## Execute script:
 ```
