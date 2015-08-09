@@ -1,4 +1,4 @@
-## Bash2REST
+# Bash2REST
 Lets you execute bash scripts located in /scripts via a REST interface.  
 Does some basic escape character removal, but only trust it from internal source.  
 
@@ -16,13 +16,13 @@ GET_counter.sh - counting to 10 with 1s sleep in each step.
                 shows how the streaming log output works
 
 
-# Execute script:
+## Execute script:
 ```
 $ curl http://127.0.0.1:5000/example -d '{"args": "some_parameter"}'
 Hello, World. You sent in: some_parameter
 ```
 
-# Add extra environment variables, will be prepended with REST_:
+## Add extra environment variables, will be prepended with REST_:
 ```
 $ curl http://127.0.0.1:5000/env -d '{"args": "", "key":"value"}'
 REST_KEY=value
@@ -31,7 +31,7 @@ SHLVL=1
 _=/usr/bin/env
 ```
 
-# Using jq (http://stedolan.github.io/jq/) to parse JSON input:
+## Using jq (http://stedolan.github.io/jq/) to parse JSON input:
 ```
 $ curl http://127.0.0.1:5000/jq -d '{"args": "", "key":"value"}'
 {
@@ -40,7 +40,7 @@ $ curl http://127.0.0.1:5000/jq -d '{"args": "", "key":"value"}'
 }
 ```
 
-# Build docker container with your own scripts based on this:
+## Build docker container with your own scripts based on this:
 ```
 $ cat >Dockerfile <<EOF
 FROM larsla/bash2rest
