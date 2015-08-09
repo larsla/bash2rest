@@ -61,9 +61,9 @@ def execute(path):
     def run(cmd, env, queue, logfile):
         with open(logfile, 'wb') as log:
             def write_log(message):
+                queue.put(message)
                 log.write(message)
                 log.flush()
-                queue.put(message)
             log.write("Output from %s\n" % ' '.join(cmd))
             log.write("Adding to environment:\n%s\n" % env)
             log.write("###START###\n")
@@ -71,15 +71,22 @@ def execute(path):
             p = subprocess.Popen(cmd, env=env, cwd=SCRIPTDIR, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             while True:
                 line = p.stdout.readline()
-                if not line:
-                    break
-                write_log(line)
+                if line:
+                    write_log(line)
+                else:
+                    if p.poll() != None:
+                        for l in p.stdout.readlines():
+                            if l:
+                                write_log(l)
+                        break
             write_log("###STOP###\n")
-        os._exit(os.EX_OK)
+            log.write("Process exited with code: %s" % p.returncode)
+            log.flush()
 
     def tail(queue):
         while True:
             line = queue.get()
+            #print line
             if line:
                 if line == "###STOP###\n":
                     return
@@ -116,7 +123,7 @@ def execute(path):
 
     env['RAW_JSON'] = json.dumps(data)
 
-    logfile = '%s/%s.log' % (LOGDIR, "%s-%s" % (resource, int(time.time())))
+    logfile = '%s/%s.log' % (LOGDIR, "%s-%s" % (resource.lstrip('/').replace('/', '-'), int(time.time())))
     queue = multiprocessing.Queue()
     p = multiprocessing.Process(target=run, args=(cmd, env, queue, logfile))
     p.start()
@@ -125,4 +132,4 @@ def execute(path):
 
 if __name__ == "__main__":
     app.debug = True
-    app.run(host='0.0.0.0')
+    app.run(host='0.0.0.0', threaded=True)
