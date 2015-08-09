@@ -2,7 +2,7 @@
 Lets you execute bash scripts located in /scripts via a REST interface.  
 Does some basic escape character removal, but only trust it from internal source.  
 
-Name the script with the request method first: <METHOD>_<SCRIPT>.sh  
+Name the script with the request method first: METHOD_SCRIPT.sh  
 Ex: GET_test.sh  
 
 You can use directories:  
