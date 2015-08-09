@@ -1,17 +1,19 @@
 ### Bash2REST
-# Lets you execute bash scripts located in /scripts with an REST "API".
+# Lets you execute bash scripts located in /scripts with an REST interface.
 # Does some basic escape character removal, but only trust it from internal source.
 #
-# Contains some example scripts:
-# example.sh - plain old helloworld that prints the input parameter
-# env.sh - prints the environment variables that was set when the script runs
-# jq.sh - example of using jq to parse JSON input
-# counter.sh - counting to 10 with 1s sleep in each step.
-#               shows how the streaming log output works
+# Name the script with the request method first: <METHOD>_<SCRIPT>.sh
+# Ex: GET_test.sh
 #
-# Get list of available scripts:
-# $ curl http://127.0.0.1:5000/
-# example env jq
+# You can use directories:
+# /scripts/users/PUT_create.sh
+#
+# Contains some example scripts:
+# POST_example.sh - plain old helloworld that prints the input parameter
+# POST_env.sh - prints the environment variables that was set when the script runs
+# POST_jq.sh - example of using jq to parse JSON input
+# GET_counter.sh - counting to 10 with 1s sleep in each step.
+#               shows how the streaming log output works
 #
 # Execute script:
 # $ curl http://127.0.0.1:5000/example -d '{"args": "some_parameter"}'
@@ -42,31 +44,27 @@ import subprocess
 import multiprocessing
 
 REMOVE_CHARS = ";&`'!\"|<>"
-LOGDIR = "/logs"
-SCRIPTDIR = "/scripts"
+LOGDIR = "./logs"
+SCRIPTDIR = "./scripts"
 
 app = Flask(__name__)
 
 class ParseError(Exception):
     pass
 
-@app.route("/")
+@app.route("/", methods=['GET', 'POST', 'PUT', 'DELETE'])
 def index():
-    scripts = []
-    for script in os.listdir(SCRIPTDIR):
-        if script.endswith('.sh'):
-            scripts.append(script.replace('.sh', ''))
-    return Response(' '.join(scripts))
+    return execute("")
 
-@app.route("/<script>", methods=['POST'])
-def execute(script):
+@app.route("/<path:path>", methods=['GET', 'POST', 'PUT', 'DELETE'])
+def execute(path):
     def run(cmd, env, logfile):
         with open(logfile, 'wb') as log:
             log.write("Output from %s\n" % ' '.join(cmd))
             log.write("Adding to environment:\n%s\n" % env)
             log.write("###START###\n")
             log.flush()
-            p = subprocess.Popen(cmd, env=env, stdout=log, stderr=subprocess.STDOUT)
+            p = subprocess.Popen(cmd, env=env, cwd=SCRIPTDIR, stdout=log, stderr=subprocess.STDOUT)
             p.wait()
             log.write("###STOP###\n")
         os._exit(os.EX_OK)
@@ -86,19 +84,28 @@ def execute(script):
                 else:
                     time.sleep(0.01)
 
-    try:
-        data = json.loads(request.get_data())
-    except:
-        raise ParseError("Unable to load JSON data")
+    method = request.method
+    base = os.path.dirname(path)
+    script = os.path.basename(path)
+
+    if method == "GET":
+        data = {}
+    else:
+        try:
+            data = json.loads(request.get_data())
+        except:
+            raise ParseError("Unable to load JSON data")
 
     cmd = ['/bin/bash']
-    cmd.append('%s/%s.sh' % (SCRIPTDIR, script))
+    cmd.append('./%s/%s_%s.sh' % (base, method, script))
 
-    if 'args' not in data: raise ParseError("Missing required field 'args'")
-    for param in str(data['args']).translate(None, REMOVE_CHARS).split(' '):
-        cmd.append(param)
+    if 'args' in data:
+        for param in str(data['args']).translate(None, REMOVE_CHARS).split(' '):
+            cmd.append(param)
 
     env = {}
+    env['REQUEST_METHOD'] = method
+    env['REQUEST_URI'] = path
     for key,value in data.items():
         if key != "args":
             env["REST_%s" % str(key).translate(None, REMOVE_CHARS).upper()] = value
