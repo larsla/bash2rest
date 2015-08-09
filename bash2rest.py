@@ -58,35 +58,39 @@ def index():
 
 @app.route("/<path:path>", methods=['GET', 'POST', 'PUT', 'DELETE'])
 def execute(path):
-    def run(cmd, env, logfile):
+    def run(cmd, env, queue, logfile):
         with open(logfile, 'wb') as log:
+            def write_log(message):
+                log.write(message)
+                log.flush()
+                queue.put(message)
             log.write("Output from %s\n" % ' '.join(cmd))
             log.write("Adding to environment:\n%s\n" % env)
             log.write("###START###\n")
             log.flush()
-            p = subprocess.Popen(cmd, env=env, cwd=SCRIPTDIR, stdout=log, stderr=subprocess.STDOUT)
-            p.wait()
-            log.write("###STOP###\n")
+            p = subprocess.Popen(cmd, env=env, cwd=SCRIPTDIR, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            while True:
+                line = p.stdout.readline()
+                if not line:
+                    break
+                write_log(line)
+            write_log("###STOP###\n")
         os._exit(os.EX_OK)
 
-    def tail(logfile):
-        with open(logfile, 'r') as log:
-            start = False
-            while True:
-                line = log.readline()
-                if line:
-                    if line == "###STOP###\n":
-                        return
-                    if start:
-                        yield line
-                    if line == "###START###\n":
-                        start = True
-                else:
-                    time.sleep(0.01)
+    def tail(queue):
+        while True:
+            line = queue.get()
+            if line:
+                if line == "###STOP###\n":
+                    return
+                yield line
+            else:
+                time.sleep(0.01)
 
     method = request.method
     base = os.path.dirname(path)
     script = os.path.basename(path)
+    resource = '%s/%s_%s' % (base, method, script)
 
     if method in ["GET", "DELETE"]:
         data = {}
@@ -97,7 +101,7 @@ def execute(path):
             raise ParseError("Unable to load JSON data")
 
     cmd = ['/bin/bash']
-    cmd.append('./%s/%s_%s.sh' % (base, method, script))
+    cmd.append('./%s.sh' % resource)
 
     if 'args' in data:
         for param in str(data['args']).translate(None, REMOVE_CHARS).split(' '):
@@ -112,11 +116,11 @@ def execute(path):
 
     env['RAW_JSON'] = json.dumps(data)
 
-    logfile = '%s/%s.log' % (LOGDIR, "%s-%s" % (script, int(time.time())))
-    p = multiprocessing.Process(target=run, args=(cmd, env, logfile))
+    logfile = '%s/%s.log' % (LOGDIR, "%s-%s" % (resource, int(time.time())))
+    queue = multiprocessing.Queue()
+    p = multiprocessing.Process(target=run, args=(cmd, env, queue, logfile))
     p.start()
-    time.sleep(1)
-    return Response(tail(logfile))
+    return Response(tail(queue))
 
 
 if __name__ == "__main__":
