@@ -88,7 +88,7 @@ def execute(path):
     base = os.path.dirname(path)
     script = os.path.basename(path)
 
-    if method == "GET":
+    if method in ["GET", "DELETE"]:
         data = {}
     else:
         try:

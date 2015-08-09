@@ -1,5 +1,5 @@
 # Bash2REST
-# Execute bash scripts via a REST API
+# Execute bash scripts via a REST interface
 #
 
 FROM ubuntu:14.04
